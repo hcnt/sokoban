@@ -3,6 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef struct vector {
+    void* data;
+    int n;
+    int capacity;
+} Vector;
+
 //------MOVE----------
 typedef enum direction { LEFT = 4, RIGHT = 6, UP = 8, DOWN = 2 } Direction;
 typedef struct move {
@@ -103,46 +109,50 @@ typedef struct box {
     char letter;
 } Box;
 
+typedef struct row {
+    Field* arr;
+    int n;
+} Row;
+
 typedef struct board {
-    Field** arr;
-    int xSize;
-    int ySize;
+    Row* arr;
+    int n;
     Position playerPos;
     Box* boxes;
     int nBoxes;
 } Board;
 
 char getCharAtPosition(Position position, Board board) {
-    return board.arr[position.y][position.x].x;
+    return board.arr[position.y].arr[position.x].x;
 }
 void setCharAtPosition(char x, Position position, Board board) {
-    board.arr[position.y][position.x].x = x;
+    board.arr[position.y].arr[position.x].x = x;
 }
 void printBoard(Board board) {
-    for (int i = 0; i < board.ySize; i++) {
-        for (int j = 0; j < board.xSize; j++) {
-            printf("%c", board.arr[i][j].x);
+    for (int i = 0; i < board.n; i++) {
+        for (int j = 0; j < board.arr[i].n; j++) {
+            printf("%c", board.arr[i].arr[j].x);
         }
         printf("\n");
     }
 }
 void killBoard(Board board) {
-    for (int i = 0; i < board.xSize; i++) {
-        free(board.arr[i]);
+    for (int i = 0; i < board.n; i++) {
+        free(board.arr[i].arr);
     }
     free(board.arr);
     free(board.boxes);
 }
-void addCharToArray(char x, Field** row, int* n) {
-    *row = realloc(*row, (*n + 1) * sizeof(Field));
-    (*row)[*n].x = x;
-    (*row)[*n].wasVisited = false;
-    (*n)++;
+void addCharToRow(char x, Row* row) {
+    row->arr = realloc(row->arr, (row->n + 1) * sizeof(Field));
+    row->arr[row->n].x = x;
+    row->arr[row->n].wasVisited = false;
+    row->n++;
 }
-void addRowToBoard(Field* row, Board* board) {
-    board->arr = realloc(board->arr, (board->ySize + 1) * sizeof(Field*));
-    board->arr[board->ySize] = row;
-    board->ySize++;
+void addRowToBoard(Row row, Board* board) {
+    board->arr = realloc(board->arr, (board->n + 1) * sizeof(Row));
+    board->arr[board->n] = row;
+    board->n++;
 }
 void addBoxToBoard(Box box, Board* board) {
     board->boxes = realloc(board->boxes, (board->nBoxes + 1) * sizeof(Box));
@@ -170,34 +180,33 @@ void setBoxPosition(char box, Position pos, Board board) {
 //------------------------------------
 
 //--------INPUT------------
-Field* getOneLineOfInput(Board* board, int* sizeToSet) {
+Row getOneLineOfInput(Board* board) {
     char currentChar = getchar();
-    Field* row = NULL;
-    int i = 0;
+    Row row;
+    row.arr = NULL;
+    row.n = 0;
     Box newBox;
     while (currentChar != '\n') {
         if (isalpha(currentChar)) {
             newBox.letter = currentChar;
-            newBox.pos = (Position){i, board->ySize};
+            newBox.pos = (Position){row.n, board->n};
             addBoxToBoard(newBox, board);
         }
         if (currentChar == '@' || currentChar == '*') {
-            board->playerPos = (Position){i, board->ySize};
+            board->playerPos = (Position){row.n, board->n};
         }
-        addCharToArray(currentChar, &row, &i);
+        addCharToRow(currentChar, &row);
         currentChar = getchar();
     }
-    *sizeToSet = i;
     return row;
 }
 Board getBoardFromInput() {
     Board board;
-    board.xSize = 0;
-    board.ySize = 0;
-    board.arr = NULL;
+    board.n = 0;
     board.nBoxes = 0;
+    board.arr = NULL;
     board.boxes = NULL;
-    Field* currentRow;
+    Row currentRow;
     char tmp;
     while (true) {
         tmp = getchar();
@@ -212,7 +221,7 @@ Board getBoardFromInput() {
             return board;
         } else
             ungetc(tmp, stdin);
-        currentRow = getOneLineOfInput(&board, &(board.xSize));
+        currentRow = getOneLineOfInput(&board);
         addRowToBoard(currentRow, &board);
         // printf("board ysize: %d\n", board.ySize);
     }
@@ -260,7 +269,8 @@ Position getPositionAfterMove(Position start, Direction dir, bool reverseMove) {
 }
 
 bool isNewPositionLegal(Position pos, Board board) {
-    if (pos.x >= board.xSize || pos.x < 0 || pos.y < 0 || pos.y >= board.ySize)
+    if (pos.y >= board.n || pos.y < 0 || pos.x >= board.arr[pos.y].n ||
+        pos.x < 0)
         return false;
     // printf("%d %d\n", pos.x, pos.y);
     char target = getCharAtPosition(pos, board);
@@ -270,14 +280,14 @@ bool isNewPositionLegal(Position pos, Board board) {
     return true;
 }
 bool wasPositionVisited(Position pos, Board board) {
-    return board.arr[pos.x][pos.y].wasVisited;
+    return board.arr[pos.x].arr[pos.y].wasVisited;
 }
 void setPositionVisited(Position pos, Board* board, bool x) {
-    board->arr[pos.x][pos.y].wasVisited = x;
+    board->arr[pos.x].arr[pos.y].wasVisited = x;
 }
 void resetAllPositions(Board* board) {
-    for (int i = 0; i < board->ySize; i++) {
-        for (int j = 0; j < board->xSize; j++) {
+    for (int i = 0; i < board->n; i++) {
+        for (int j = 0; j < board->arr[i].n; j++) {
             setPositionVisited((Position){i, j}, board, false);
         }
     }
@@ -322,18 +332,17 @@ Position makeMove(Board* board, Move move) {
     // printf("target box position: %d, %d\n", targetPosition.x,
     // targetPosition.y);
 
-    if (targetPosition.x >= board->xSize || targetPosition.x < 0 ||
-        targetPosition.y < 0 || targetPosition.y >= board->ySize) {
+    if (!isNewPositionLegal(targetPosition, *board)) {
         // printf("-------MOVE ABORTED------\n");
         return board->playerPos;
     }
 
-    char target = getCharAtPosition(targetPosition, *board);
-    if (target == '#' || isalpha(target)) {
-        // printf("invalid target: %c\n", target);
-        // printf("-------MOVE ABORTED------\n");
-        return board->playerPos;
-    }
+    // char target = getCharAtPosition(targetPosition, *board);
+    // if (target == '#' || isalpha(target)) {
+    //     // printf("invalid target: %c\n", target);
+    //     // printf("-------MOVE ABORTED------\n");
+    //     return board->playerPos;
+    // }
     Position playerTargetPosition =
         getPositionAfterMove(boxPosition, move.direction, true);
     // printf("target player position: %d, %d\n", playerTargetPosition.x,
