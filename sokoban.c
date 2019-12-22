@@ -3,22 +3,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//------MOVE----------
 typedef enum direction { LEFT = 4, RIGHT = 6, UP = 8, DOWN = 2 } Direction;
-
 typedef struct move {
     bool isUndoMove;
     bool isTerminating;
     char box;
     Direction direction;
 } Move;
+//------------------------------------
 
+//----------POSITION-------------
 typedef struct position {
     int x;
     int y;
 } Position;
 
 bool equals(Position a, Position b) { return a.x == b.x && a.y == b.y; }
+//------------------------------------
 
+//-------POSITION QUEUE------------------
 typedef struct positionList {
     Position pos;
     struct positionList* next;
@@ -59,21 +63,45 @@ Position pop(PositionQueue* queue) {
 }
 bool isEmpty(PositionQueue queue) { return queue.firstItem == NULL; }
 
-typedef struct box {
-    Position pos;
-    char letter;
-} Box;
+void printQueue(PositionQueue q) {
+    PositionList* list = q.firstItem;
+    printf("queue state: ");
+    while (list != NULL) {
+        printf("%d,%d ", list->pos.x, list->pos.y);
+        list = list->next;
+    }
+    printf("\n");
+}
+//------------------------------------
 
+//----------STATE STACK-------------
 typedef struct stateStack {
     Position positionBeforeMove;
     Move move;
     struct stateStack* lastState;
 } StateStack;
 
+void printMoveStack(StateStack* stack) {
+    printf("state stack:\n");
+    while (stack != NULL) {
+        printf("move: %c%d, playerPos:%d %d\n", stack->move.box,
+               stack->move.direction, stack->positionBeforeMove.x,
+               stack->positionBeforeMove.y);
+        stack = stack->lastState;
+    }
+}
+//--------------------------------
+
+//-----------BOARD-------------------
 typedef struct field {
     char x;
     bool wasVisited;
 } Field;
+
+typedef struct box {
+    Position pos;
+    char letter;
+} Box;
 
 typedef struct board {
     Field** arr;
@@ -90,7 +118,6 @@ char getCharAtPosition(Position position, Board board) {
 void setCharAtPosition(char x, Position position, Board board) {
     board.arr[position.y][position.x].x = x;
 }
-
 void printBoard(Board board) {
     for (int i = 0; i < board.ySize; i++) {
         for (int j = 0; j < board.xSize; j++) {
@@ -99,7 +126,6 @@ void printBoard(Board board) {
         printf("\n");
     }
 }
-
 void killBoard(Board board) {
     for (int i = 0; i < board.xSize; i++) {
         free(board.arr[i]);
@@ -123,8 +149,6 @@ void addBoxToBoard(Box box, Board* board) {
     board->boxes[board->nBoxes] = box;
     board->nBoxes++;
 }
-
-// box has to be in array
 Position getBoxPosition(char box, Board board) {
     for (int i = 0; i < board.nBoxes; i++) {
         if (board.boxes[i].letter == box) {
@@ -143,8 +167,9 @@ void setBoxPosition(char box, Position pos, Board board) {
     }
     printf("error - box not found\n");
 }
+//------------------------------------
 
-// TODO refactor
+//--------INPUT------------
 Field* getOneLineOfInput(Board* board, int* sizeToSet) {
     char currentChar = getchar();
     Field* row = NULL;
@@ -194,7 +219,6 @@ Board getBoardFromInput() {
 
     return board;
 }
-
 Move getMoveFromInput() {
     Move move;
     move.isUndoMove = false;
@@ -214,6 +238,7 @@ Move getMoveFromInput() {
     move.direction = tmp - '0';
     return move;
 }
+//---------------------------
 
 Position getPositionAfterMove(Position start, Direction dir, bool reverseMove) {
     int r = reverseMove ? -1 : 1;
@@ -244,29 +269,18 @@ bool isNewPositionLegal(Position pos, Board board) {
     }
     return true;
 }
-
 bool wasPositionVisited(Position pos, Board board) {
     return board.arr[pos.x][pos.y].wasVisited;
 }
 void setPositionVisited(Position pos, Board* board, bool x) {
     board->arr[pos.x][pos.y].wasVisited = x;
 }
-
 void resetAllPositions(Board* board) {
     for (int i = 0; i < board->ySize; i++) {
         for (int j = 0; j < board->xSize; j++) {
             setPositionVisited((Position){i, j}, board, false);
         }
     }
-}
-void printQueue(PositionQueue q) {
-    PositionList* list = q.firstItem;
-    printf("queue state: ");
-    while (list != NULL) {
-        printf("%d,%d ", list->pos.x, list->pos.y);
-        list = list->next;
-    }
-    printf("\n");
 }
 
 bool isMovePossible(Position start, Position target, Board* board) {
@@ -349,15 +363,6 @@ Position makeMove(Board* board, Move move) {
         // printf("-------MOVE NOT MADE------\n");
     }
     return board->playerPos;
-}
-void printMoveStack(StateStack* stack) {
-    printf("state stack:\n");
-    while (stack != NULL) {
-        printf("move: %c%d, playerPos:%d %d\n", stack->move.box,
-               stack->move.direction, stack->positionBeforeMove.x,
-               stack->positionBeforeMove.y);
-        stack = stack->lastState;
-    }
 }
 
 void undoMove(Board* board, StateStack** stack) {
