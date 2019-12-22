@@ -131,13 +131,13 @@ Position getBoxPosition(char box, Board board) {
             return board.boxes[i].pos;
         }
     }
-    printf("box not found\n");
+    printf("error - box not found\n");
+    return board.boxes[0].pos;
 }
-Position setBoxPosition(char box, Position pos, Board board) {
+void setBoxPosition(char box, Position pos, Board board) {
     for (int i = 0; i < board.nBoxes; i++) {
         if (board.boxes[i].letter == box) {
             board.boxes[i].pos = pos;
-            return pos;
         }
     }
     printf("box not found\n");
