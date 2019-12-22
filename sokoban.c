@@ -138,9 +138,10 @@ void setBoxPosition(char box, Position pos, Board board) {
     for (int i = 0; i < board.nBoxes; i++) {
         if (board.boxes[i].letter == box) {
             board.boxes[i].pos = pos;
+            return;
         }
     }
-    printf("box not found\n");
+    printf("error - box not found\n");
 }
 
 // TODO refactor
