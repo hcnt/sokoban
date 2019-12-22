@@ -149,19 +149,14 @@ Field* getOneLineOfInput(Board* board, int* sizeToSet) {
     Field* row = NULL;
     int i = 0;
     Box newBox;
-    Position pos;
     while (currentChar != '\n') {
         if (isalpha(currentChar)) {
             newBox.letter = currentChar;
-            pos.x = i;
-            pos.y = board->ySize;
-            newBox.pos = pos;
+            newBox.pos = (Position){i, board->ySize};
             addBoxToBoard(newBox, board);
         }
         if (currentChar == '@' || currentChar == '*') {
-            pos.x = i;
-            pos.y = board->ySize;
-            board->playerPos = pos;
+            board->playerPos = (Position){i, board->ySize};
         }
         addCharToArray(currentChar, &row, &i);
         currentChar = getchar();
@@ -257,12 +252,9 @@ void setPositionVisited(Position pos, Board* board, bool x) {
 }
 
 void resetAllPositions(Board* board) {
-    Position tmp;
     for (int i = 0; i < board->ySize; i++) {
         for (int j = 0; j < board->xSize; j++) {
-            tmp.x = i;
-            tmp.y = j;
-            setPositionVisited(tmp, board, false);
+            setPositionVisited((Position){i, j}, board, false);
         }
     }
 }
