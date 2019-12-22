@@ -223,7 +223,7 @@ Board getBoardFromInput() {
             ungetc(tmp, stdin);
         currentRow = getOneLineOfInput(&board);
         addRowToBoard(currentRow, &board);
-        // printf("board ysize: %d\n", board.ySize);
+        // printf("board ysize: %d\n", board.n);
     }
 
     return board;
@@ -280,15 +280,15 @@ bool isNewPositionLegal(Position pos, Board board) {
     return true;
 }
 bool wasPositionVisited(Position pos, Board board) {
-    return board.arr[pos.x].arr[pos.y].wasVisited;
+    return board.arr[pos.y].arr[pos.x].wasVisited;
 }
 void setPositionVisited(Position pos, Board* board, bool x) {
-    board->arr[pos.x].arr[pos.y].wasVisited = x;
+    board->arr[pos.y].arr[pos.x].wasVisited = x;
 }
 void resetAllPositions(Board* board) {
     for (int i = 0; i < board->n; i++) {
         for (int j = 0; j < board->arr[i].n; j++) {
-            setPositionVisited((Position){i, j}, board, false);
+            setPositionVisited((Position){j, i}, board, false);
         }
     }
 }
@@ -337,12 +337,6 @@ Position makeMove(Board* board, Move move) {
         return board->playerPos;
     }
 
-    // char target = getCharAtPosition(targetPosition, *board);
-    // if (target == '#' || isalpha(target)) {
-    //     // printf("invalid target: %c\n", target);
-    //     // printf("-------MOVE ABORTED------\n");
-    //     return board->playerPos;
-    // }
     Position playerTargetPosition =
         getPositionAfterMove(boxPosition, move.direction, true);
     // printf("target player position: %d, %d\n", playerTargetPosition.x,
@@ -377,7 +371,7 @@ Position makeMove(Board* board, Move move) {
 void undoMove(Board* board, StateStack** stack) {
     // printf("-------UNDOING MOVE------\n");
     // printMoveStack(*stack);
-    if (stack == NULL)
+    if (*stack == NULL)
         return;
     // move box to the current player position
     char box = (*stack)->move.box;
