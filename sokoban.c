@@ -81,6 +81,21 @@ typedef struct stateStack {
     struct stateStack* lastState;
 } StateStack;
 
+void addStateToStack(Move move, Position playerPos, StateStack** stack) {
+    StateStack* tmp = malloc(sizeof(StateStack));
+    tmp->lastState = *stack;
+    tmp->move = move;
+    tmp->positionBeforeMove = playerPos;
+    *stack = tmp;
+}
+StateStack popStack(StateStack** stack) {
+    StateStack* tmp = *stack;
+    StateStack value = *tmp;
+    (*stack) = (*stack)->lastState;
+    free(tmp);
+    return value;
+}
+
 void printMoveStack(StateStack* stack) {
     printf("state stack:\n");
     while (stack != NULL) {
@@ -111,9 +126,9 @@ typedef struct row {
 typedef struct board {
     Row* arr;
     int n;
-    Position playerPos;
     Box* boxes;
     int nBoxes;
+    Position playerPos;
 } Board;
 
 char getCharAtPosition(Position position, Board board) {
@@ -207,13 +222,11 @@ Board getBoardFromInput() {
     while (true) {
         tmp = getchar();
         if (tmp == '\n') {
-            // TESTING
             // printf("nboxes: %d\n", board.nBoxes);
             // for (int i = 0; i < board.nBoxes; i++) {
             //     printf("box: %c, position: %d %d\n", board.boxes[i].letter,
             //            board.boxes[i].pos.x, board.boxes[i].pos.y);
             // }
-            // // TESTING
             return board;
         } else
             ungetc(tmp, stdin);
@@ -319,6 +332,46 @@ bool isMovePossible(Position start, Position target, Board* board) {
     return false;
 }
 
+void applyMoveToBoard(Position boxPosition, Position boxPositionAfterMove,
+                      Position playerPosition, Position playerPositionAfterMove,
+                      Board* board) {
+    char tmpCurrent;
+    char tmpAfter;
+    // Remove player and box symbols from current positions
+    tmpCurrent = getCharAtPosition(playerPosition, *board);
+    if (tmpCurrent == '@')
+        tmpAfter = '-';
+    else
+        tmpAfter = '+';
+    setCharAtPosition(tmpAfter, playerPosition, *board);
+
+    tmpCurrent = getCharAtPosition(boxPosition, *board);
+    if (islower(tmpCurrent))
+        tmpAfter = '-';
+    else
+        tmpAfter = '+';
+    setCharAtPosition(tmpAfter, boxPosition, *board);
+    // add player and box symbols to positions after move
+    char boxSymbol = tmpCurrent;
+
+    tmpCurrent = getCharAtPosition(playerPositionAfterMove, *board);
+    if (tmpCurrent == '-')
+        tmpAfter = '@';
+    else
+        tmpAfter = '*';
+    setCharAtPosition(tmpAfter, playerPositionAfterMove, *board);
+
+    tmpCurrent = getCharAtPosition(boxPositionAfterMove, *board);
+    if (tmpCurrent == '-')
+        tmpAfter = tolower(boxSymbol);
+    else
+        tmpAfter = toupper(boxSymbol);
+    setCharAtPosition(tmpAfter, boxPositionAfterMove, *board);
+
+    board->playerPos = playerPositionAfterMove;
+    setBoxPosition(boxSymbol, boxPositionAfterMove, *board);
+}
+
 Position makeMove(Board* board, Move move) {
     // printf("-------MAKING MOVE------\n");
     Position boxPosition = getBoxPosition(move.box, *board);
@@ -338,29 +391,13 @@ Position makeMove(Board* board, Move move) {
     // printf("target player position: %d, %d\n", playerTargetPosition.x,
     //    playerTargetPosition.y);
 
-    if (isMovePossible(board->playerPos, playerTargetPosition, board)) {
-        if (getCharAtPosition(board->playerPos, *board) == '@')
-            setCharAtPosition('-', board->playerPos, *board);
-        else
-            setCharAtPosition('+', board->playerPos, *board);
-
-        if (isupper(getCharAtPosition(boxPosition, *board))) {
-            setCharAtPosition('*', boxPosition, *board);
-        } else {
-            setCharAtPosition('@', boxPosition, *board);
-        }
-
-        if (getCharAtPosition(targetPosition, *board) == '-')
-            setCharAtPosition(move.box, targetPosition, *board);
-        else
-            setCharAtPosition(toupper(move.box), targetPosition, *board);
-
-        board->playerPos = boxPosition;
-        setBoxPosition(move.box, targetPosition, *board);
-        // printf("-------MOVE MADE------\n");
-    } else {
-        // printf("-------MOVE NOT MADE------\n");
-    }
+    if (isMovePossible(board->playerPos, playerTargetPosition, board)) // {
+        applyMoveToBoard(boxPosition, targetPosition, board->playerPos,
+                         boxPosition, board);
+    // printf("-------MOVE MADE------\n");
+    // } else {
+    //     // printf("-------MOVE NOT MADE------\n");
+    // }
     return board->playerPos;
 }
 
@@ -370,44 +407,16 @@ void undoMove(Board* board, StateStack** stack) {
     if (*stack == NULL)
         return;
     // move box to the current player position
-    char box = (*stack)->move.box;
+    StateStack state = popStack(stack);
+    char box = state.move.box;
     Position currentBoxPosition = getBoxPosition(box, *board);
     // printf("move box from %d %d to %d %d\n", );
-    if (getCharAtPosition(board->playerPos, *board) == '@')
-        setCharAtPosition(box, board->playerPos, *board);
-    else
-        setCharAtPosition(toupper(box), board->playerPos, *board);
-
-    if (isupper(getCharAtPosition(currentBoxPosition, *board)))
-        setCharAtPosition('+', currentBoxPosition, *board);
-    else
-        setCharAtPosition('-', currentBoxPosition, *board);
-
-    setBoxPosition((*stack)->move.box, board->playerPos, *board);
-
-    // move player to the position before move
-    board->playerPos = (*stack)->positionBeforeMove;
-    if (getCharAtPosition(board->playerPos, *board) == '-')
-        setCharAtPosition('@', board->playerPos, *board);
-    else
-        setCharAtPosition('*', board->playerPos, *board);
-
-    // pop state from a stack
-    StateStack* tmp = *stack;
-    (*stack) = (*stack)->lastState;
-    free(tmp);
+    applyMoveToBoard(currentBoxPosition, board->playerPos, board->playerPos,
+                     state.positionBeforeMove, board);
     // printf("-------UNDOING MOVE COMPLETE------\n");
-}
-void addStateToStack(Move move, Position playerPos, StateStack** stack) {
-    StateStack* tmp = malloc(sizeof(StateStack));
-    tmp->lastState = *stack;
-    tmp->move = move;
-    tmp->positionBeforeMove = playerPos;
-    *stack = tmp;
 }
 
 void play() {
-    // printf("board size: %d %d\n", board.xSize, board.ySize);
     Board board = getBoardFromInput();
     Position playerPositionBeforeMove = board.playerPos;
     Position playerPositionAfterMove;
@@ -418,7 +427,6 @@ void play() {
         move = getMoveFromInput();
         getchar();
         if (move.isUndoMove) {
-            // printf("undo move\n");
             undoMove(&board, &stack);
             playerPositionBeforeMove = board.playerPos;
         } else if (move.isTerminating) {
