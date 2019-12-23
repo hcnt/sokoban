@@ -3,12 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct vector {
-    void* data;
-    int n;
-    int capacity;
-} Vector;
-
 //------MOVE----------
 typedef enum direction { LEFT = 4, RIGHT = 6, UP = 8, DOWN = 2 } Direction;
 typedef struct move {
@@ -160,6 +154,7 @@ void addBoxToBoard(Box box, Board* board) {
     board->nBoxes++;
 }
 Position getBoxPosition(char box, Board board) {
+    box = tolower(box);
     for (int i = 0; i < board.nBoxes; i++) {
         if (board.boxes[i].letter == box) {
             return board.boxes[i].pos;
@@ -169,6 +164,7 @@ Position getBoxPosition(char box, Board board) {
     return board.boxes[0].pos;
 }
 void setBoxPosition(char box, Position pos, Board board) {
+    box = tolower(box);
     for (int i = 0; i < board.nBoxes; i++) {
         if (board.boxes[i].letter == box) {
             board.boxes[i].pos = pos;
@@ -188,7 +184,7 @@ Row getOneLineOfInput(Board* board) {
     Box newBox;
     while (currentChar != '\n') {
         if (isalpha(currentChar)) {
-            newBox.letter = currentChar;
+            newBox.letter = tolower(currentChar);
             newBox.pos = (Position){row.n, board->n};
             addBoxToBoard(newBox, board);
         }
@@ -424,6 +420,7 @@ void play() {
         if (move.isUndoMove) {
             // printf("undo move\n");
             undoMove(&board, &stack);
+            playerPositionBeforeMove = board.playerPos;
         } else if (move.isTerminating) {
             return;
         } else {
@@ -434,8 +431,8 @@ void play() {
                 addStateToStack(move, playerPositionBeforeMove, &stack);
                 // printMoveStack(stack);
             }
+            playerPositionBeforeMove = playerPositionAfterMove;
         }
-        playerPositionBeforeMove = playerPositionAfterMove;
         printBoard(board);
     }
     killBoard(board);
