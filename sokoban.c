@@ -186,7 +186,7 @@ Position getBoxPosition(char box, Board board) {
         }
     }
     printf("error - box not found\n");
-    return board.boxes[0].pos;
+    return (Position){-1, -1};
 }
 void setBoxPosition(char box, Position pos, Board board) {
     box = tolower(box);
@@ -232,17 +232,11 @@ Board getBoardFromInput() {
     while (true) {
         tmp = getchar();
         if (tmp == '\n') {
-            // printf("nboxes: %d\n", board.nBoxes);
-            // for (int i = 0; i < board.nBoxes; i++) {
-            //     printf("box: %c, position: %d %d\n", board.boxes[i].letter,
-            //            board.boxes[i].pos.x, board.boxes[i].pos.y);
-            // }
             return board;
         } else
             ungetc(tmp, stdin);
         currentRow = getOneLineOfInput(&board);
         addRowToBoard(currentRow, &board);
-        // printf("board ysize: %d\n", board.n);
     }
 
     return board;
@@ -291,7 +285,6 @@ bool isNewPositionLegal(Position pos, Board board) {
     if (pos.y >= board.n || pos.y < 0 || pos.x >= board.arr[pos.y].n ||
         pos.x < 0)
         return false;
-    // printf("%d %d\n", pos.x, pos.y);
     char target = getCharAtPosition(pos, board);
     if (target == '#' || isalpha(target)) {
         return false;
@@ -313,18 +306,12 @@ void resetAllPositions(Board* board) {
 }
 
 bool isMovePossible(Position start, Position target, Board* board) {
-    // printf("-------CHECKING IF MOVE POSSIBLE------\n");
-    // printf("starting position: %d %d\n", start.x, start.y);
-    // printf("target position: %d %d\n", target.x, target.y);
     PositionQueue queue = initQueue(start);
     Position pos;
     Position tmp;
     while (!isEmpty(queue)) {
-        // printQueue(queue);
         pos = pop(&queue);
-        // printf("checking position %d,%d\n", pos.x, pos.y);
         if (equals(pos, target)) {
-            // printf("-------MOVE POSSIBLE------\n");
             clearQueue(&queue);
             resetAllPositions(board);
             return true;
@@ -333,14 +320,13 @@ bool isMovePossible(Position start, Position target, Board* board) {
             tmp = getPositionAfterMove(pos, i, false);
             if (isNewPositionLegal(tmp, *board) &&
                 !wasPositionVisited(tmp, *board)) {
-                push(tmp, &queue);
                 setPositionVisited(tmp, board, true);
+                push(tmp, &queue);
             }
         }
     }
     clearQueue(&queue);
     resetAllPositions(board);
-    // printf("-------MOVE NOT POSSIBLE------\n");
     return false;
 }
 
@@ -385,47 +371,29 @@ void applyMoveToBoard(Position boxPosition, Position boxPositionAfterMove,
 }
 
 Position makeMove(Board* board, Move move) {
-    // printf("-------MAKING MOVE------\n");
     Position boxPosition = getBoxPosition(move.box, *board);
-    // printf("current box position: %d, %d\n", boxPosition.x, boxPosition.y);
     Position targetPosition =
         getPositionAfterMove(boxPosition, move.direction, false);
-    // printf("target box position: %d, %d\n", targetPosition.x,
-    // targetPosition.y);
 
-    if (!isNewPositionLegal(targetPosition, *board)) {
-        // printf("-------MOVE ABORTED------\n");
+    if (!isNewPositionLegal(targetPosition, *board))
         return board->playerPos;
-    }
 
     Position playerTargetPosition =
         getPositionAfterMove(boxPosition, move.direction, true);
-    // printf("target player position: %d, %d\n", playerTargetPosition.x,
-    //    playerTargetPosition.y);
 
-    if (isMovePossible(board->playerPos, playerTargetPosition, board)) // {
+    if (isMovePossible(board->playerPos, playerTargetPosition, board))
         applyMoveToBoard(boxPosition, targetPosition, board->playerPos,
                          boxPosition, board);
-    // printf("-------MOVE MADE------\n");
-    // } else {
-    //     // printf("-------MOVE NOT MADE------\n");
-    // }
     return board->playerPos;
 }
 
 void undoMove(Board* board, StateStack** stack) {
-    // printf("-------UNDOING MOVE------\n");
-    // printMoveStack(*stack);
     if (*stack == NULL)
         return;
-    // move box to the current player position
     StateStack state = popStack(stack);
-    char box = state.move.box;
-    Position currentBoxPosition = getBoxPosition(box, *board);
-    // printf("move box from %d %d to %d %d\n", );
+    Position currentBoxPosition = getBoxPosition(state.move.box, *board);
     applyMoveToBoard(currentBoxPosition, board->playerPos, board->playerPos,
                      state.positionBeforeMove, board);
-    // printf("-------UNDOING MOVE COMPLETE------\n");
 }
 
 void play() {
@@ -447,11 +415,8 @@ void play() {
             return;
         } else {
             playerPositionAfterMove = makeMove(&board, move);
-            // printf("player position after move: %d, %d\n",
-            //    playerPositionAfterMove.x, playerPositionAfterMove.y);
             if (!equals(playerPositionAfterMove, playerPositionBeforeMove)) {
                 addStateToStack(move, playerPositionBeforeMove, &stack);
-                // printMoveStack(stack);
             }
             playerPositionBeforeMove = playerPositionAfterMove;
         }
