@@ -72,6 +72,11 @@ void printQueue(PositionQueue q) {
     }
     printf("\n");
 }
+void clearQueue(PositionQueue* queue) {
+    while (!isEmpty(*queue)) {
+        pop(queue);
+    }
+}
 //------------------------------------
 
 //----------STATE STACK-------------
@@ -94,6 +99,11 @@ StateStack popStack(StateStack** stack) {
     (*stack) = (*stack)->lastState;
     free(tmp);
     return value;
+}
+void clearStack(StateStack** stack) {
+    while (*stack != NULL) {
+        popStack(stack);
+    }
 }
 
 void printMoveStack(StateStack* stack) {
@@ -315,6 +325,7 @@ bool isMovePossible(Position start, Position target, Board* board) {
         // printf("checking position %d,%d\n", pos.x, pos.y);
         if (equals(pos, target)) {
             // printf("-------MOVE POSSIBLE------\n");
+            clearQueue(&queue);
             resetAllPositions(board);
             return true;
         }
@@ -327,6 +338,7 @@ bool isMovePossible(Position start, Position target, Board* board) {
             }
         }
     }
+    clearQueue(&queue);
     resetAllPositions(board);
     // printf("-------MOVE NOT POSSIBLE------\n");
     return false;
@@ -430,6 +442,8 @@ void play() {
             undoMove(&board, &stack);
             playerPositionBeforeMove = board.playerPos;
         } else if (move.isTerminating) {
+            clearStack(&stack);
+            killBoard(board);
             return;
         } else {
             playerPositionAfterMove = makeMove(&board, move);
@@ -443,7 +457,6 @@ void play() {
         }
         printBoard(board);
     }
-    killBoard(board);
 }
 
 int main() {
