@@ -155,7 +155,7 @@ void printBoard(Board board) {
         printf("\n");
     }
 }
-void killBoard(Board board) {
+void clearBoard(Board board) {
     for (int i = 0; i < board.n; i++) {
         free(board.arr[i].arr);
     }
@@ -238,7 +238,6 @@ Board getBoardFromInput() {
         currentRow = getOneLineOfInput(&board);
         addRowToBoard(currentRow, &board);
     }
-
     return board;
 }
 Move getMoveFromInput() {
@@ -370,13 +369,13 @@ void applyMoveToBoard(Position boxPosition, Position boxPositionAfterMove,
     setBoxPosition(boxSymbol, boxPositionAfterMove, *board);
 }
 
-Position makeMove(Board* board, Move move) {
+void makeMove(Board* board, Move move) {
     Position boxPosition = getBoxPosition(move.box, *board);
     Position targetPosition =
         getPositionAfterMove(boxPosition, move.direction, false);
 
     if (!isNewPositionLegal(targetPosition, *board))
-        return board->playerPos;
+        return;
 
     Position playerTargetPosition =
         getPositionAfterMove(boxPosition, move.direction, true);
@@ -384,7 +383,6 @@ Position makeMove(Board* board, Move move) {
     if (isMovePossible(board->playerPos, playerTargetPosition, board))
         applyMoveToBoard(boxPosition, targetPosition, board->playerPos,
                          boxPosition, board);
-    return board->playerPos;
 }
 
 void undoMove(Board* board, StateStack** stack) {
@@ -399,26 +397,24 @@ void undoMove(Board* board, StateStack** stack) {
 void play() {
     Board board = getBoardFromInput();
     Position playerPositionBeforeMove = board.playerPos;
-    Position playerPositionAfterMove;
     Move move;
     StateStack* stack = NULL;
     printBoard(board);
     while (true) {
         move = getMoveFromInput();
-        getchar();
-        if (move.isUndoMove) {
+        getchar(); // skip endline char
+        if (move.isTerminating) {
+            clearStack(&stack);
+            clearBoard(board);
+            return;
+        } else if (move.isUndoMove) {
             undoMove(&board, &stack);
             playerPositionBeforeMove = board.playerPos;
-        } else if (move.isTerminating) {
-            clearStack(&stack);
-            killBoard(board);
-            return;
         } else {
-            playerPositionAfterMove = makeMove(&board, move);
-            if (!equals(playerPositionAfterMove, playerPositionBeforeMove)) {
+            makeMove(&board, move);
+            if (!equals(board.playerPos, playerPositionBeforeMove))
                 addStateToStack(move, playerPositionBeforeMove, &stack);
-            }
-            playerPositionBeforeMove = playerPositionAfterMove;
+            playerPositionBeforeMove = board.playerPos;
         }
         printBoard(board);
     }
