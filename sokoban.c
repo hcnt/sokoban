@@ -35,11 +35,11 @@ typedef struct positionQueue {
 
 PositionQueue initQueue(Position firstPos) {
     PositionQueue queue;
-    PositionList* pos = malloc(sizeof(PositionList));
-    pos->pos = firstPos;
-    pos->next = NULL;
-    queue.firstItem = pos;
-    queue.lastItem = pos;
+    PositionList* posList = malloc(sizeof(PositionList));
+    posList->pos = firstPos;
+    posList->next = NULL;
+    queue.firstItem = posList;
+    queue.lastItem = posList;
     return queue;
 }
 void push(Position pos, PositionQueue* queue) {
@@ -63,15 +63,6 @@ Position pop(PositionQueue* queue) {
 }
 bool isEmpty(PositionQueue queue) { return queue.firstItem == NULL; }
 
-void printQueue(PositionQueue q) {
-    PositionList* list = q.firstItem;
-    printf("queue state: ");
-    while (list != NULL) {
-        printf("%d,%d ", list->pos.x, list->pos.y);
-        list = list->next;
-    }
-    printf("\n");
-}
 void clearQueue(PositionQueue* queue) {
     while (!isEmpty(*queue)) {
         pop(queue);
@@ -103,16 +94,6 @@ StateStack popStack(StateStack** stack) {
 void clearStack(StateStack** stack) {
     while (*stack != NULL) {
         popStack(stack);
-    }
-}
-
-void printMoveStack(StateStack* stack) {
-    printf("state stack:\n");
-    while (stack != NULL) {
-        printf("move: %c%d, playerPos:%d %d\n", stack->move.box,
-               stack->move.direction, stack->positionBeforeMove.x,
-               stack->positionBeforeMove.y);
-        stack = stack->lastState;
     }
 }
 //--------------------------------
@@ -329,28 +310,28 @@ bool isMovePossible(Position start, Position target, Board* board) {
     return false;
 }
 
+// set char at position to '+' or '-', returns removed char
+char clearBoardPosition(Position pos, Board* board) {
+    char x = getCharAtPosition(pos, *board);
+    char tmp;
+    if (x == '@' || islower(x))
+        tmp = '-';
+    else
+        tmp = '+';
+    setCharAtPosition(tmp, pos, *board);
+    return x;
+}
+
 void applyMoveToBoard(Position boxPosition, Position boxPositionAfterMove,
                       Position playerPosition, Position playerPositionAfterMove,
                       Board* board) {
     char tmpCurrent;
     char tmpAfter;
     // Remove player and box symbols from current positions
-    tmpCurrent = getCharAtPosition(playerPosition, *board);
-    if (tmpCurrent == '@')
-        tmpAfter = '-';
-    else
-        tmpAfter = '+';
-    setCharAtPosition(tmpAfter, playerPosition, *board);
+    clearBoardPosition(playerPosition, board);
+    char boxSymbol = clearBoardPosition(boxPosition, board);
 
-    tmpCurrent = getCharAtPosition(boxPosition, *board);
-    if (islower(tmpCurrent))
-        tmpAfter = '-';
-    else
-        tmpAfter = '+';
-    setCharAtPosition(tmpAfter, boxPosition, *board);
     // add player and box symbols to positions after move
-    char boxSymbol = tmpCurrent;
-
     tmpCurrent = getCharAtPosition(playerPositionAfterMove, *board);
     if (tmpCurrent == '-')
         tmpAfter = '@';
